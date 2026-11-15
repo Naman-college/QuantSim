@@ -1,0 +1,6 @@
+# Core dependencies for Stock Market Strategy Backtester
+numpy>=1.24.0
+pandas>=2.0.0
+yfinance>=0.2.35
+PySide6>=6.6.0
+pyqtgraph>=0.13.3

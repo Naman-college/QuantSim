@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stock Backtester Chart</title>
+    <script src="lightweight-charts.standalone.production.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+        body {
+            background-color: #0F1012;
+            color: #F3F4F6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Header Control Bar */
+        #toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+            background-color: #0F1012;
+            border-bottom: 1px solid #232530;
+            flex-shrink: 0;
+        }
+
+        .button-group {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background-color: #16181D;
+            padding: 3px;
+            border-radius: 6px;
+            border: 1px solid #232530;
+        }
+
+        .btn-tab {
+            background: transparent;
+            border: none;
+            color: #8A8F98;
+            padding: 5px 12px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-tab:hover {
+            color: #F3F4F6;
+            background-color: #1F2128;
+        }
+
+        .btn-tab.active {
+            color: #FFFFFF;
+            background-color: #5E6AD2;
+        }
+
+        .btn-range {
+            background: transparent;
+            border: none;
+            color: #8A8F98;
+            padding: 4px 9px;
+            font-size: 11px;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn-range:hover {
+            color: #F3F4F6;
+            background-color: #1F2128;
+        }
+
+        .btn-range.active {
+            color: #FFFFFF;
+            background-color: #262933;
+            border: 1px solid #3B3F50;
+        }
+
+        /* Chart Container */
+        #chart-container {
+            flex-grow: 1;
+            position: relative;
+            width: 100%;
+            height: calc(100vh - 46px);
+        }
+
+        /* Floating HUD */
+        #hud-overlay {
+            position: absolute;
+            top: 10px;
+            left: 12px;
+            z-index: 10;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .hud-date {
+            color: #8A8F98;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .hud-main {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .hud-value {
+            color: #F3F4F6;
+            font-family: "JetBrains Mono", "Consolas", monospace;
+            font-size: 19px;
+            font-weight: 700;
+        }
+
+        .hud-pill {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: "JetBrains Mono", "Consolas", monospace;
+        }
+
+        .hud-pill.positive {
+            color: #27C384;
+            background-color: rgba(39, 195, 132, 0.15);
+            border: 1px solid rgba(39, 195, 132, 0.3);
+        }
+
+        .hud-pill.negative {
+            color: #F43F5E;
+            background-color: rgba(244, 63, 94, 0.15);
+            border: 1px solid rgba(244, 63, 94, 0.3);
+        }
+
+        .hud-benchmark {
+            color: #8A8F98;
+            font-size: 11px;
+            font-family: "JetBrains Mono", "Consolas", monospace;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header Toolbar -->
+    <div id="toolbar">
+        <div class="button-group">
+            <button class="btn-tab active" id="tab-equity" onclick="switchView('equity')">EQUITY CURVE</button>
+            <button class="btn-tab" id="tab-candle" onclick="switchView('candle')">PRICE / CANDLESTICKS</button>
+            <button class="btn-tab" id="tab-drawdown" onclick="switchView('drawdown')">DRAWDOWN (%)</button>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-range" onclick="setTimeRange('1M', this)">1M</button>
+            <button class="btn-range" onclick="setTimeRange('3M', this)">3M</button>
+            <button class="btn-range" onclick="setTimeRange('6M', this)">6M</button>
+            <button class="btn-range" onclick="setTimeRange('YTD', this)">YTD</button>
+            <button class="btn-range" onclick="setTimeRange('1Y', this)">1Y</button>
+            <button class="btn-range active" onclick="setTimeRange('ALL', this)">ALL</button>
+        </div>
+    </div>
+
+    <!-- Chart Container -->
+    <div id="chart-container">
+        <div id="hud-overlay">
+            <span class="hud-date" id="hud-date">—</span>
+            <div class="hud-main">
+                <span class="hud-value" id="hud-value">—</span>
+                <span class="hud-pill positive" id="hud-delta" style="display: none;">+0.00%</span>
+            </div>
+            <span class="hud-benchmark" id="hud-benchmark">—</span>
+        </div>
+    </div>
+
+    <script>
+        let chart = null;
+        let equitySeries = null;
+        let benchmarkSeries = null;
+        let candleSeries = null;
+        let drawdownSeries = null;
+        let markerPlugin = null;
+        let currentView = 'equity';
+        let rawData = null;
+        let currentCurrency = "$";
+
+        // Boundary constraint state
+        let isClamping = false;
+
+        const container = document.getElementById('chart-container');
+        const hudDate = document.getElementById('hud-date');
+        const hudValue = document.getElementById('hud-value');
+        const hudDelta = document.getElementById('hud-delta');
+        const hudBenchmark = document.getElementById('hud-benchmark');
+
+        function formatCurrency(val) {
+            if (val === undefined || val === null || isNaN(val)) return '—';
+            return currentCurrency + Number(val).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function initChart() {
+            try {
+                chart = LightweightCharts.createChart(container, {
+                    autoSize: true,
+                    layout: {
+                        background: { color: '#0F1012' },
+                        textColor: '#8A8F98',
+                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", sans-serif',
+                        fontSize: 11,
+                    },
+                    grid: {
+                        vertLines: { color: 'rgba(35, 37, 48, 0.45)' },
+                        horzLines: { color: 'rgba(35, 37, 48, 0.45)' },
+                    },
+                    crosshair: {
+                        mode: LightweightCharts.CrosshairMode.Normal,
+                    },
+                    rightPriceScale: {
+                        borderColor: '#232530',
+                        autoScale: true,
+                        scaleMargins: {
+                            top: 0.12,
+                            bottom: 0.12,
+                        },
+                        alignLabels: true,
+                    },
+                    timeScale: {
+                        borderColor: '#232530',
+                        timeVisible: true,
+                        rightOffset: 0,
+                        barSpacing: 8,
+                        minBarSpacing: 0.001,
+                        fixLeftEdge: true,   // Cannot pan/zoom before first available data point
+                        fixRightEdge: true,  // Cannot pan/zoom after last available data point
+                    },
+                    handleScale: {
+                        mouseWheel: true,
+                        pinch: true,
+                        axisPressedMouseMove: true,
+                    },
+                    handleScroll: {
+                        mouseWheel: true,
+                        pressedMouseMove: true,
+                        horzTouchDrag: true,
+                        vertTouchDrag: false,
+                    },
+                });
+
+                // V5 Series API
+                equitySeries = chart.addSeries(LightweightCharts.AreaSeries, {
+                    lineColor: '#5E6AD2',
+                    topColor: 'rgba(94, 106, 210, 0.35)',
+                    bottomColor: 'rgba(94, 106, 210, 0.02)',
+                    lineWidth: 2,
+                    priceFormat: {
+                        type: 'custom',
+                        formatter: price => formatCurrency(price)
+                    }
+                });
+
+                benchmarkSeries = chart.addSeries(LightweightCharts.LineSeries, {
+                    color: '#8A8F98',
+                    lineWidth: 1.5,
+                    lineStyle: LightweightCharts.LineStyle.Dashed,
+                    priceFormat: {
+                        type: 'custom',
+                        formatter: price => formatCurrency(price)
+                    }
+                });
+
+                candleSeries = chart.addSeries(LightweightCharts.CandlestickSeries, {
+                    upColor: '#27C384',
+                    downColor: '#F43F5E',
+                    borderUpColor: '#27C384',
+                    borderDownColor: '#F43F5E',
+                    wickUpColor: '#27C384',
+                    wickDownColor: '#F43F5E',
+                    priceFormat: {
+                        type: 'custom',
+                        formatter: price => formatCurrency(price)
+                    }
+                });
+                candleSeries.applyOptions({ visible: false });
+
+                drawdownSeries = chart.addSeries(LightweightCharts.AreaSeries, {
+                    lineColor: '#F43F5E',
+                    topColor: 'rgba(244, 63, 94, 0.02)',
+                    bottomColor: 'rgba(244, 63, 94, 0.35)',
+                    lineWidth: 2,
+                    priceFormat: {
+                        type: 'custom',
+                        formatter: price => Number(price).toFixed(2) + '%'
+                    }
+                });
+                drawdownSeries.applyOptions({ visible: false });
+
+                // The single limit on the chart: data must exist at those points
+                // Clamps zoom out so the visible range never exceeds the total available data span
+                chart.timeScale().subscribeVisibleLogicalRangeChange(newRange => {
+                    if (isClamping || !newRange || !rawData || !rawData.equityData) return;
+                    const n = rawData.equityData.length;
+                    if (n === 0) return;
+
+                    const currentSpan = newRange.to - newRange.from;
+
+                    // Cannot zoom out beyond total available data bars
+                    if (currentSpan > n) {
+                        isClamping = true;
+                        chart.timeScale().setVisibleLogicalRange({
+                            from: 0,
+                            to: n - 1
+                        });
+                        setTimeout(() => { isClamping = false; }, 30);
+                    }
+                });
+
+                // Crosshair HUD subscription
+                chart.subscribeCrosshairMove(param => {
+                    if (!param || !param.time || !param.seriesData || !rawData) {
+                        updateHUDDefault();
+                        return;
+                    }
+                    const timeStr = typeof param.time === 'string' ? param.time : `${param.time.year}-${String(param.time.month).padStart(2,'0')}-${String(param.time.day).padStart(2,'0')}`;
+                    hudDate.innerText = timeStr;
+
+                    if (currentView === 'equity') {
+                        const eq = param.seriesData.get(equitySeries);
+                        const bn = param.seriesData.get(benchmarkSeries);
+                        if (eq && rawData.equityData && rawData.equityData.length > 0) {
+                            const val = eq.value;
+                            hudValue.innerText = formatCurrency(val);
+                            const startVal = rawData.equityData[0].value;
+                            const pct = ((val - startVal) / startVal) * 100;
+                            hudDelta.style.display = 'inline-block';
+                            hudDelta.innerText = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+                            hudDelta.className = 'hud-pill ' + (pct >= 0 ? 'positive' : 'negative');
+                        }
+                        if (bn && rawData.benchmarkData && rawData.benchmarkData.length > 0) {
+                            const bVal = bn.value;
+                            const bStart = rawData.benchmarkData[0].value;
+                            const bPct = ((bVal - bStart) / bStart) * 100;
+                            hudBenchmark.innerText = `Buy & Hold: ${formatCurrency(bVal)} (${bPct >= 0 ? '+' : ''}${bPct.toFixed(1)}%)`;
+                        }
+                    } else if (currentView === 'candle') {
+                        const c = param.seriesData.get(candleSeries);
+                        if (c) {
+                            hudValue.innerText = `O: ${formatCurrency(c.open)}  H: ${formatCurrency(c.high)}  L: ${formatCurrency(c.low)}  C: ${formatCurrency(c.close)}`;
+                            hudDelta.style.display = 'none';
+                            hudBenchmark.innerText = '';
+                        }
+                    } else if (currentView === 'drawdown') {
+                        const dd = param.seriesData.get(drawdownSeries);
+                        if (dd) {
+                            hudValue.innerText = Number(dd.value).toFixed(2) + '%';
+                            hudDelta.style.display = 'none';
+                            hudBenchmark.innerText = '';
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.error("Init chart error:", err);
+            }
+        }
+
+        function switchView(viewName) {
+            currentView = viewName;
+            document.querySelectorAll('.btn-tab').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('tab-' + viewName);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            if (equitySeries) equitySeries.applyOptions({ visible: viewName === 'equity' });
+            if (benchmarkSeries) benchmarkSeries.applyOptions({ visible: viewName === 'equity' });
+            if (candleSeries) candleSeries.applyOptions({ visible: viewName === 'candle' });
+            if (drawdownSeries) drawdownSeries.applyOptions({ visible: viewName === 'drawdown' });
+
+            updateHUDDefault();
+        }
+
+        // Preset Range Jump Buttons (1M, 3M, 6M, YTD, 1Y, ALL)
+        function setTimeRange(rangeKey, btn) {
+            document.querySelectorAll('.btn-range').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+
+            if (!rawData || !rawData.equityData || rawData.equityData.length === 0 || !chart) return;
+
+            const n = rawData.equityData.length;
+            if (rangeKey === 'ALL') {
+                chart.timeScale().fitContent();
+                return;
+            }
+
+            const latestDate = new Date(rawData.equityData[n - 1].time);
+            let targetDate = new Date(latestDate);
+
+            if (rangeKey === '1M') targetDate.setMonth(targetDate.getMonth() - 1);
+            else if (rangeKey === '3M') targetDate.setMonth(targetDate.getMonth() - 3);
+            else if (rangeKey === '6M') targetDate.setMonth(targetDate.getMonth() - 6);
+            else if (rangeKey === 'YTD') targetDate = new Date(latestDate.getFullYear(), 0, 1);
+            else if (rangeKey === '1Y') targetDate.setFullYear(targetDate.getFullYear() - 1);
+
+            let startIdx = 0;
+            for (let i = 0; i < n; i++) {
+                if (new Date(rawData.equityData[i].time) >= targetDate) {
+                    startIdx = i;
+                    break;
+                }
+            }
+
+            isClamping = true;
+            chart.timeScale().setVisibleLogicalRange({
+                from: startIdx,
+                to: n - 1
+            });
+            setTimeout(() => { isClamping = false; }, 40);
+        }
+
+        function updateHUDDefault() {
+            if (!rawData) return;
+            if (currentView === 'equity' && rawData.equityData && rawData.equityData.length > 0) {
+                const first = rawData.equityData[0];
+                const last = rawData.equityData[rawData.equityData.length - 1];
+                hudDate.innerText = last.time;
+                hudValue.innerText = formatCurrency(last.value);
+                const pct = ((last.value - first.value) / first.value) * 100;
+                hudDelta.style.display = 'inline-block';
+                hudDelta.innerText = (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+                hudDelta.className = 'hud-pill ' + (pct >= 0 ? 'positive' : 'negative');
+
+                if (rawData.benchmarkData && rawData.benchmarkData.length > 0) {
+                    const bFirst = rawData.benchmarkData[0];
+                    const bLast = rawData.benchmarkData[rawData.benchmarkData.length - 1];
+                    const bPct = ((bLast.value - bFirst.value) / bFirst.value) * 100;
+                    hudBenchmark.innerText = `Buy & Hold: ${formatCurrency(bLast.value)} (${bPct >= 0 ? '+' : ''}${bPct.toFixed(1)}%)`;
+                }
+            } else if (currentView === 'candle' && rawData.candleData && rawData.candleData.length > 0) {
+                const last = rawData.candleData[rawData.candleData.length - 1];
+                hudDate.innerText = last.time;
+                hudValue.innerText = formatCurrency(last.close);
+                hudDelta.style.display = 'none';
+                hudBenchmark.innerText = '';
+            } else if (currentView === 'drawdown' && rawData.drawdownData && rawData.drawdownData.length > 0) {
+                const last = rawData.drawdownData[rawData.drawdownData.length - 1];
+                hudDate.innerText = last.time;
+                hudValue.innerText = Number(last.value).toFixed(2) + '%';
+                hudDelta.style.display = 'none';
+                hudBenchmark.innerText = '';
+            }
+        }
+
+        // Global python bridge function
+        window.updateChartData = function(data) {
+            try {
+                if (typeof data === 'string') {
+                    data = JSON.parse(data);
+                }
+                rawData = data;
+                if (data.currency) {
+                    currentCurrency = data.currency;
+                }
+
+                if (!chart) initChart();
+
+                // Dynamic price formatters
+                const customFormat = {
+                    type: 'custom',
+                    formatter: price => formatCurrency(price)
+                };
+                if (equitySeries) equitySeries.applyOptions({ priceFormat: customFormat });
+                if (benchmarkSeries) benchmarkSeries.applyOptions({ priceFormat: customFormat });
+                if (candleSeries) candleSeries.applyOptions({ priceFormat: customFormat });
+
+                if (data.equityData && equitySeries) equitySeries.setData(data.equityData);
+                if (data.benchmarkData && benchmarkSeries) benchmarkSeries.setData(data.benchmarkData);
+                if (data.candleData && candleSeries) candleSeries.setData(data.candleData);
+                if (data.drawdownData && drawdownSeries) drawdownSeries.setData(data.drawdownData);
+
+                // Markers
+                if (data.markers && data.markers.length > 0) {
+                    const formattedMarkers = data.markers.map(m => {
+                        const isBuy = m.action.toUpperCase().includes('BUY');
+                        return {
+                            time: m.time,
+                            position: isBuy ? 'belowBar' : 'aboveBar',
+                            color: isBuy ? '#27C384' : '#F43F5E',
+                            shape: isBuy ? 'arrowUp' : 'arrowDown',
+                            text: m.action,
+                        };
+                    });
+
+                    if (markerPlugin) {
+                        try { markerPlugin.detach(); } catch (e) {}
+                    }
+                    if (typeof LightweightCharts.createSeriesMarkers === 'function') {
+                        markerPlugin = LightweightCharts.createSeriesMarkers(equitySeries, formattedMarkers);
+                    } else if (typeof equitySeries.setMarkers === 'function') {
+                        equitySeries.setMarkers(formattedMarkers);
+                    }
+                }
+
+                // Initial framing: fit all available data
+                if (chart && rawData && rawData.equityData) {
+                    chart.timeScale().fitContent();
+                }
+
+                updateHUDDefault();
+            } catch (err) {
+                console.error("updateChartData error:", err);
+            }
+        };
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initChart();
+        });
+
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (chart && container) {
+                    chart.applyOptions({
+                        width: container.clientWidth,
+                        height: container.clientHeight
+                    });
+                }
+            }, 50);
+        });
+    </script>
+</body>
+</html>
