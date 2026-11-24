@@ -1,6 +1,6 @@
 # Stock Market Strategy Backtester
 
-A quantitative stock market strategy backtester built with **Python 3**, **NumPy**, and **pandas**, featuring a modern desktop interface inspired by the minimalist dark theme of [Linear.app](https://linear.app).
+A quantitative stock market strategy backtester built with **Python 3**, **NumPy**, and **pandas**.
 
 ---
 
