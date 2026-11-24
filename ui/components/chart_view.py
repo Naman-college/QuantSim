@@ -139,6 +139,14 @@ class ChartView(QWidget):
         else:
             self._pending_payload = payload
 
+    def show_loading(self, msg: str = "Running quantitative backtest..."):
+        if self._is_loaded:
+            self.web_view.page().runJavaScript(f"window.showLoading('{msg}');")
+
+    def hide_loading(self):
+        if self._is_loaded:
+            self.web_view.page().runJavaScript("window.hideLoading();")
+
     def _send_payload_to_js(self, payload: dict):
         json_str = json.dumps(payload)
         self.web_view.page().runJavaScript(f"window.updateChartData({json_str});")

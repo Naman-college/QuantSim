@@ -25,7 +25,7 @@ def main():
     )
 
     app = QApplication(sys.argv)
-    app.setApplicationName("Linear Stock Backtester")
+    app.setApplicationName("QuantSim")
     # Set default font point size so internal Qt widgets don't see pointSize -1
     app.setFont(QFont("Segoe UI", 10))
     

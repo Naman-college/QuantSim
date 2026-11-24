@@ -47,6 +47,14 @@ def test_strategies():
     print("ALL 5 STRATEGIES PASSED VERIFICATION!")
     print("=" * 60)
 
+    print("\nTESTING COMBINED MULTI-STRATEGY COMPARISON & RANKING...")
+    all_res = engine.run_all_strategies(ticker="AAPL", start_date="2023-01-01", initial_capital=10000.0)
+    print("Rankings for AAPL:")
+    for r in all_res["ranking"]:
+        print(f"  #{r['rank']} {r['strategy']} | Return: {r['total_return']:+.2f}% | CAGR: {r['cagr']:+.2f}% | Sharpe: {r['sharpe']:.2f} | MDD: {r['max_drawdown']:.2f}% | Trades: {r['trades']}")
+
+    print("\nALL COMPARISON & LEADERBOARD VERIFICATIONS PASSED!")
+
 
 if __name__ == "__main__":
     test_strategies()

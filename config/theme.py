@@ -3,24 +3,35 @@ theme.py - Linear.app Aesthetic Design System & Qt Style Sheet (QSS).
 Maintained by Member 4 (UI/UX Developer).
 """
 
-# Linear Color Tokens
-COLOR_CANVAS = "#08090A"           # App background
-COLOR_SURFACE = "#0F1012"          # Panels and card background
-COLOR_SURFACE_ELEVATED = "#16181D" # Elevated modals, dropdowns
-COLOR_BORDER = "#232530"           # Subtle 1px crisp borders
-COLOR_BORDER_FOCUS = "#3B3F50"     # Active input borders
+# ==============================================================================
+# 3-COLOR MASTER PALETTE
+# 1. Base / Neutral: Deep Obsidian Canvas & Surfaces (#08090A, #0F1012, border #232530)
+# 2. Primary Accent: Electric Indigo (#5E6AD2)
+# 3. Data / Metric Accent: Emerald Green (#10B981)
+# ==============================================================================
 
-COLOR_ACCENT = "#5E6AD2"           # Linear signature electric indigo
+# 1. Neutral Base
+COLOR_CANVAS = "#08090A"           # App canvas
+COLOR_SURFACE = "#0F1012"          # Panels and cards
+COLOR_SURFACE_ELEVATED = "#16181D" # Elevated modals, dropdowns
+COLOR_BORDER = "#232530"           # Crisp 1px borders
+COLOR_BORDER_FOCUS = "#3B3F50"     # Focused borders
+
+# 2. Primary Accent (Electric Indigo)
+COLOR_ACCENT = "#5E6AD2"           # Active tabs, primary buttons, brand highlight
 COLOR_ACCENT_HOVER = "#7170FF"     # Lighter indigo hover state
 COLOR_ACCENT_MUTED = "rgba(94, 106, 210, 0.15)"
 
-COLOR_SUCCESS = "#27C384"          # Profit green
-COLOR_DANGER = "#F43F5E"           # Drawdown / loss red
-COLOR_WARNING = "#F59E0B"          # Cash / neutral amber
+# 3. Data / Metric Accent (Emerald Green)
+COLOR_SUCCESS = "#10B981"          # Profit green, #1 rank badge, positive delta
+COLOR_SUCCESS_MUTED = "rgba(16, 185, 129, 0.15)"
 
+# Subtle typography & drawdown tints
 COLOR_TEXT_PRIMARY = "#F3F4F6"     # High contrast primary text
 COLOR_TEXT_SECONDARY = "#8A8F98"   # Muted labels and subtitles
 COLOR_TEXT_MUTED = "#525866"       # Disabled / hint text
+COLOR_DANGER = "#EF4444"           # Loss / drawdown red
+COLOR_WARNING = "#F59E0B"          # Amber tint
 
 # Comprehensive Linear.app Qt Style Sheet
 LINEAR_STYLESHEET = f"""
@@ -125,26 +136,40 @@ QComboBox QAbstractItemView {{
 }}
 
 /* Tabs */
+QTabWidget {{
+    background-color: transparent;
+}}
+
 QTabWidget::pane {{
-    border: 1px solid {COLOR_BORDER};
-    background-color: {COLOR_SURFACE};
-    border-radius: 8px;
+    border: none;
+    background-color: transparent;
+}}
+
+QTabBar {{
+    background-color: transparent;
+    qproperty-drawBase: 0;
 }}
 
 QTabBar::tab {{
-    background-color: transparent;
+    background-color: #12141A;
     color: {COLOR_TEXT_SECONDARY};
-    padding: 8px 16px;
-    font-weight: 500;
-    border-bottom: 2px solid transparent;
+    padding: 8px 18px;
+    font-weight: 600;
+    font-size: 12px;
+    border: 1px solid {COLOR_BORDER};
+    border-radius: 6px;
+    margin-right: 6px;
 }}
 
 QTabBar::tab:selected {{
-    color: {COLOR_TEXT_PRIMARY};
+    background-color: #1A1D26;
+    color: #FFFFFF;
+    border: 1px solid {COLOR_BORDER_FOCUS};
     border-bottom: 2px solid {COLOR_ACCENT};
 }}
 
 QTabBar::tab:hover:!selected {{
+    background-color: #181B22;
     color: {COLOR_TEXT_PRIMARY};
 }}
 

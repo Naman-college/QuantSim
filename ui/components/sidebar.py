@@ -1,77 +1,173 @@
 """
-sidebar.py - Simplified Linear.app-styled Sidebar.
+sidebar.py - Modern Linear.app-styled Sidebar with Unified Stock Search & Add.
 Maintained by Member 4 (UI/UX Developer).
 """
 
 from PySide6.QtWidgets import (
     QFrame, QVBoxLayout, QLabel, QComboBox, QLineEdit,
     QPushButton, QSpinBox, QDoubleSpinBox, QDateEdit,
-    QStackedWidget, QWidget, QFormLayout, QHBoxLayout
+    QStackedWidget, QWidget, QFormLayout, QHBoxLayout,
+    QListWidget, QListWidgetItem
 )
-from PySide6.QtCore import Qt, QDate, Signal
+from PySide6.QtCore import Qt, QDate, Signal, QTimer, QThread
 from strategies import AVAILABLE_STRATEGIES
+from core.stock_search import search_stocks
+from config.presets import get_currency_symbol
 from config.theme import (
-    COLOR_SURFACE, COLOR_BORDER, COLOR_ACCENT,
+    COLOR_SURFACE, COLOR_SURFACE_ELEVATED, COLOR_BORDER,
+    COLOR_BORDER_FOCUS, COLOR_ACCENT, COLOR_ACCENT_HOVER,
     COLOR_TEXT_PRIMARY, COLOR_TEXT_SECONDARY, COLOR_SUCCESS
 )
 
-# Clean, curated list of top popular stocks (US & India)
-POPULAR_TICKERS = [
-    ("S&P 500 ETF (SPY)", "SPY"),
-    ("Nasdaq 100 ETF (QQQ)", "QQQ"),
-    ("Apple Inc. (AAPL)", "AAPL"),
-    ("NVIDIA Corp. (NVDA)", "NVDA"),
-    ("Tesla Inc. (TSLA)", "TSLA"),
-    ("Microsoft Corp. (MSFT)", "MSFT"),
-    ("NIFTY 50 Index", "^NSEI"),
-    ("Reliance Industries", "RELIANCE.NS"),
-    ("Tata Consultancy (TCS)", "TCS.NS"),
-    ("HDFC Bank", "HDFCBANK.NS"),
-]
+
+class StockSearchWorker(QThread):
+    """Asynchronous worker for querying stock tickers without lagging the UI."""
+    results_ready = Signal(list)
+
+    def __init__(self, query: str):
+        super().__init__()
+        self.query = query
+
+    def run(self):
+        matches = search_stocks(self.query, limit=10)
+        self.results_ready.emit(matches)
 
 
 class Sidebar(QFrame):
     """
-    Minimalist control sidebar for selecting stock, strategy,
-    parameters, timeframe, and triggering backtest.
+    Sleek control sidebar featuring:
+    1. Search & Select stock with instant dropdown suggestions
+    2. Selected stock status badge (with active exchange & market tag)
+    3. Strategy selection & simplified parameters
+    4. Capital & Date timeframe controls
+    5. Action buttons: 'Run Backtest' & 'Compare All Strategies'
     """
     run_backtest_signal = Signal(dict)
+    stock_changed = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("sidebarPanel")
-        self.setFixedWidth(290)
+        self.setMinimumWidth(260)
+        self.setMaximumWidth(420)
+
+        self.selected_symbol = "SPY"
+        self.selected_name = "SPDR S&P 500 ETF Trust"
+        self.search_worker = None
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(14, 16, 14, 16)
+        layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
 
-        # 1. Header
+        # 1. Header with Linear Branding
         header_layout = QHBoxLayout()
         header_layout.setSpacing(8)
         status_dot = QLabel("●")
-        status_dot.setStyleSheet(f"color: {COLOR_SUCCESS}; font-size: 10px;")
+        status_dot.setStyleSheet(f"color: {COLOR_SUCCESS}; font-size: 11px;")
         header_layout.addWidget(status_dot)
 
-        app_title = QLabel("BACKTESTER")
-        app_title.setStyleSheet("font-size: 12px; font-weight: 700; letter-spacing: 1px;")
+        app_title = QLabel("QUANTSIM")
+        app_title.setStyleSheet("font-size: 13px; font-weight: 800; letter-spacing: 1.5px; color: #FFFFFF;")
         header_layout.addWidget(app_title)
         header_layout.addStretch()
         layout.addLayout(header_layout)
 
-        # 2. Stock Selection
-        layout.addWidget(self._create_header("SELECT STOCK / ETF"))
-        self.combo_ticker = QComboBox()
-        for name, symbol in POPULAR_TICKERS:
-            self.combo_ticker.addItem(name, userData=symbol)
-        self.combo_ticker.currentIndexChanged.connect(self._update_currency_prefix)
-        layout.addWidget(self.combo_ticker)
+        # 2. Stock Search & Add Section
+        layout.addWidget(self._create_header("STOCK / ASSET SEARCH"))
 
-        # Custom Ticker
-        self.txt_custom_ticker = QLineEdit()
-        self.txt_custom_ticker.setPlaceholderText("Or custom ticker (e.g. AMZN, BTC-USD)")
-        self.txt_custom_ticker.textChanged.connect(self._update_currency_prefix)
-        layout.addWidget(self.txt_custom_ticker)
+        search_box_layout = QVBoxLayout()
+        search_box_layout.setSpacing(4)
+
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("🔍  Search ticker or company (e.g. NVDA, Tata, SPY)...")
+        self.search_input.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {COLOR_SURFACE_ELEVATED};
+                border: 1px solid {COLOR_BORDER};
+                border-radius: 6px;
+                padding: 7px 10px;
+                color: {COLOR_TEXT_PRIMARY};
+                font-size: 12px;
+            }}
+            QLineEdit:focus {{
+                border: 1px solid {COLOR_ACCENT};
+            }}
+        """)
+        search_box_layout.addWidget(self.search_input)
+
+        # Search Suggestions Dropdown List (hidden by default)
+        self.results_list = QListWidget()
+        self.results_list.setFixedHeight(140)
+        self.results_list.hide()
+        self.results_list.setStyleSheet(f"""
+            QListWidget {{
+                background-color: #14161C;
+                border: 1px solid {COLOR_BORDER_FOCUS};
+                border-radius: 6px;
+                color: {COLOR_TEXT_PRIMARY};
+                font-size: 11px;
+                outline: none;
+                padding: 2px;
+            }}
+            QListWidget::item {{
+                padding: 6px 8px;
+                border-bottom: 1px solid #1C1E26;
+                border-radius: 4px;
+            }}
+            QListWidget::item:hover {{
+                background-color: #1F222C;
+                color: #FFFFFF;
+            }}
+            QListWidget::item:selected {{
+                background-color: {COLOR_ACCENT};
+                color: #FFFFFF;
+            }}
+        """)
+        search_box_layout.addWidget(self.results_list)
+        layout.addLayout(search_box_layout)
+
+        # Debounced Search Timer
+        self.search_timer = QTimer(self)
+        self.search_timer.setSingleShot(True)
+        self.search_timer.setInterval(220)
+        self.search_timer.timeout.connect(self._trigger_search)
+        self.search_input.textChanged.connect(self.search_timer.start)
+        self.results_list.itemClicked.connect(self._on_search_item_clicked)
+
+        # Active Selected Stock Pill / Card
+        self.active_stock_card = QFrame()
+        self.active_stock_card.setStyleSheet(f"""
+            QFrame {{
+                background-color: #161820;
+                border: 1px solid {COLOR_BORDER};
+                border-radius: 6px;
+                padding: 6px 8px;
+            }}
+        """)
+        stock_card_layout = QHBoxLayout(self.active_stock_card)
+        stock_card_layout.setContentsMargins(6, 4, 6, 4)
+        stock_card_layout.setSpacing(6)
+
+        self.lbl_selected_sym = QLabel("SPY")
+        self.lbl_selected_sym.setStyleSheet("font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: #FFFFFF;")
+        stock_card_layout.addWidget(self.lbl_selected_sym)
+
+        self.lbl_selected_name = QLabel("S&P 500 ETF")
+        self.lbl_selected_name.setStyleSheet(f"font-size: 11px; color: {COLOR_TEXT_SECONDARY};")
+        stock_card_layout.addWidget(self.lbl_selected_name, stretch=1)
+
+        self.lbl_currency_tag = QLabel("$ USD")
+        self.lbl_currency_tag.setStyleSheet(f"""
+            background-color: rgba(94, 106, 210, 0.15);
+            color: {COLOR_ACCENT};
+            border: 1px solid rgba(94, 106, 210, 0.3);
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 5px;
+        """)
+        stock_card_layout.addWidget(self.lbl_currency_tag)
+        layout.addWidget(self.active_stock_card)
 
         # 3. Strategy Selection
         layout.addWidget(self._create_header("TRADING STRATEGY"))
@@ -107,7 +203,7 @@ class Sidebar(QFrame):
         layout.addLayout(form_layout)
         layout.addStretch()
 
-        # 6. Run Button
+        # 6. Action Button
         self.btn_run = QPushButton("▶ Run Backtest")
         self.btn_run.setObjectName("primaryButton")
         self.btn_run.setCursor(Qt.PointingHandCursor)
@@ -115,13 +211,66 @@ class Sidebar(QFrame):
         self.btn_run.clicked.connect(self._emit_run)
         layout.addWidget(self.btn_run)
 
-        self._update_currency_prefix()
+        self._update_currency_display()
 
-    def _update_currency_prefix(self):
-        from config.presets import get_currency_symbol
-        custom = self.txt_custom_ticker.text().strip()
-        ticker = custom if custom else (self.combo_ticker.currentData() or "SPY")
-        sym = get_currency_symbol(ticker)
+    def _trigger_search(self):
+        query = self.search_input.text().strip()
+        if not query:
+            self.results_list.hide()
+            return
+
+        if self.search_worker and self.search_worker.isRunning():
+            self.search_worker.terminate()
+            self.search_worker.wait()
+
+        self.search_worker = StockSearchWorker(query)
+        self.search_worker.results_ready.connect(self._populate_search_results)
+        self.search_worker.start()
+
+    def _populate_search_results(self, matches: list):
+        self.results_list.clear()
+        if not matches:
+            self.results_list.hide()
+            return
+
+        for item in matches:
+            sym = item["symbol"]
+            name = item["name"]
+            market = item.get("market", "")
+            
+            # Formatted list item
+            list_item = QListWidgetItem(f"{sym}  —  {name} ({market})")
+            list_item.setData(Qt.UserRole, item)
+            self.results_list.addItem(list_item)
+
+        self.results_list.show()
+
+    def _on_search_item_clicked(self, item: QListWidgetItem):
+        data = item.data(Qt.UserRole)
+        if data:
+            self.selected_symbol = data["symbol"]
+            self.selected_name = data["name"]
+            self.lbl_selected_sym.setText(self.selected_symbol)
+            self.lbl_selected_name.setText(self.selected_name[:24] + "..." if len(self.selected_name) > 24 else self.selected_name)
+            
+            self._update_currency_display()
+            self.search_input.clear()
+            self.results_list.hide()
+            self.stock_changed.emit(self.selected_symbol)
+
+    def _update_currency_display(self):
+        sym = get_currency_symbol(self.selected_symbol)
+        is_in = "Rs" in sym
+        self.lbl_currency_tag.setText("₹ INR" if is_in else "$ USD")
+        self.lbl_currency_tag.setStyleSheet(f"""
+            background-color: rgba(94, 106, 210, 0.15);
+            color: {COLOR_ACCENT};
+            border: 1px solid rgba(94, 106, 210, 0.3);
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+        """)
         self.spin_capital.setPrefix(f"{sym}")
         self.spin_sip_amount.setPrefix(f"{sym}")
 
@@ -199,9 +348,8 @@ class Sidebar(QFrame):
     def _on_strategy_changed(self, idx: int):
         self.param_stack.setCurrentIndex(idx)
 
-    def _emit_run(self):
-        custom = self.txt_custom_ticker.text().strip()
-        ticker = custom.upper() if custom else (self.combo_ticker.currentData() or "SPY")
+    def _collect_payload(self) -> dict:
+        ticker = self.selected_symbol.upper()
         strat_name = self.combo_strategy.currentText()
         start_date = self.date_start.date().toString("yyyy-MM-dd")
         capital = float(self.spin_capital.value())
@@ -223,10 +371,32 @@ class Sidebar(QFrame):
                 "slow_period": int(self.spin_ma_slow.value()),
             }
 
-        self.run_backtest_signal.emit({
+        # Build full strategy parameters dict for multi-strategy comparison
+        all_params_dict = {
+            "1. Lump Sum Investment": {},
+            "2. Buying Dips": {"dip_pct": float(self.spin_dip_pct.value())},
+            "3. SIP (Systematic Investment Plan)": {"monthly_installment": float(self.spin_sip_amount.value())},
+            "4. Target Gain & Stop Loss": {
+                "target_gain_pct": float(self.spin_target_gain.value()),
+                "stop_loss_pct": float(self.spin_stop_loss.value()),
+            },
+            "5. Moving Average Crossover": {
+                "fast_period": int(self.spin_ma_fast.value()),
+                "slow_period": int(self.spin_ma_slow.value()),
+            }
+        }
+
+        return {
             "ticker": ticker,
             "strategy_name": strat_name,
             "start_date": start_date,
             "capital": capital,
-            "params": params
-        })
+            "params": params,
+            "all_params": all_params_dict
+        }
+
+    def get_current_payload(self) -> dict:
+        return self._collect_payload()
+
+    def _emit_run(self):
+        self.run_backtest_signal.emit(self._collect_payload())
