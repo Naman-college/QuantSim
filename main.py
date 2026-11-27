@@ -1,42 +1,16 @@
 """
-main.py - Entry point for the Linear-styled Stock Market Strategy Backtester.
-Semester 3 Python Project (NumPy & pandas).
+main.py - Root entry point for QuantSim (Stock Market Strategy Backtester).
+Assembled by all 4 team members: Shourya (UI), Rounak (Strategies), Prakshat (APIs), Naman (Backend & Bridge).
 """
 
-import sys
-import os
+import sys  # System path and interpreter utilities
+import os  # Filesystem path resolution
 
-# Ensure project root is in python path
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-if ROOT_DIR not in sys.path:
-    sys.path.insert(0, ROOT_DIR)
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))  # Resolve root project folder (StockBackTest/)
+if ROOT_DIR not in sys.path:  # Ensure Shourya/, Rounak/, Prakshat/, Naman/ packages are importable from anywhere
+    sys.path.insert(0, ROOT_DIR)  # Prepend project root to Python module search path
 
-from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont
-from ui.main_window import MainWindow
-from config.theme import LINEAR_STYLESHEET
+from Naman.app import launch_app  # Import Naman's master application launcher that bridges all 4 modules
 
-
-def main():
-    # Enable High DPI pixmaps
-    QApplication.setHighDpiScaleFactorRoundingPolicy(
-        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
-    )
-
-    app = QApplication(sys.argv)
-    app.setApplicationName("QuantSim")
-    # Set default font point size so internal Qt widgets don't see pointSize -1
-    app.setFont(QFont("Segoe UI", 10))
-    
-    # Apply Linear.app dark theme stylesheet
-    app.setStyleSheet(LINEAR_STYLESHEET)
-
-    window = MainWindow()
-    window.show()
-
-    sys.exit(app.exec())
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # Run GUI only when main.py is executed directly
+    launch_app()  # Start the PySide6 desktop application

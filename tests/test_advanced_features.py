@@ -1,36 +1,37 @@
 """
-test_advanced_features.py - Unit and integration tests for dynamic parameters, currency handling, and UI tiles.
+tests/test_advanced_features.py - Unit & integration tests for parameters, currencies, and Indian tickers.
 """
 
-import sys
-import os
-import pytest
+import sys  # Python path utilities
+import os  # Filesystem path utilities
+import pytest  # Pytest test runner
 
-ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-if ROOT_DIR not in sys.path:
-    sys.path.insert(0, ROOT_DIR)
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # Resolve project root directory
+if ROOT_DIR not in sys.path:  # Ensure member folders are importable
+    sys.path.insert(0, ROOT_DIR)  # Prepend project root
 
-from core.engine import BacktestEngine
-from config.presets import get_currency_symbol
-from strategies.lump_sum import LumpSumStrategy
-from strategies.buying_dips import BuyingDipsStrategy
-from strategies.sip import SIPStrategy
-from strategies.target_stop_loss import TargetStopLossStrategy
-from strategies.moving_average import MovingAverageCrossoverStrategy
+from Naman.engine import BacktestEngine  # Naman's backend orchestrator
+from Prakshat.presets import get_currency_symbol  # Prakshat's currency helper
+from Rounak.lump_sum import LumpSumStrategy  # Rounak's Strategy 1
+from Rounak.buying_dips import BuyingDipsStrategy  # Rounak's Strategy 2
+from Rounak.sip import SIPStrategy  # Rounak's Strategy 3
+from Rounak.target_stop_loss import TargetStopLossStrategy  # Rounak's Strategy 4
+from Rounak.moving_average import MovingAverageCrossoverStrategy  # Rounak's Strategy 5
 
 
 def test_currency_symbols():
-    assert get_currency_symbol("SPY") == "$"
-    assert get_currency_symbol("AAPL") == "$"
-    assert get_currency_symbol("RELIANCE.NS") == "₹"
+    """Verifies currency detection for US vs Indian tickers."""
+    assert get_currency_symbol("SPY") == "$"  # US ETF uses USD
+    assert get_currency_symbol("AAPL") == "$"  # US stock uses USD
+    assert get_currency_symbol("RELIANCE.NS") == "₹"  # Pre-existing assertion from original suite
     assert get_currency_symbol("TCS.NS") == "₹"
     assert get_currency_symbol("^NSEI") == "₹"
     assert get_currency_symbol("^BSESN") == "₹"
 
 
 def test_lump_sum_advanced_options():
+    """Tests partial equity allocation with cash yield and transaction fee."""
     engine = BacktestEngine()
-    # Test partial allocation with cash interest
     res = engine.run_backtest(
         ticker="SPY",
         strategy_name="1. Lump Sum Investment",
@@ -45,13 +46,13 @@ def test_lump_sum_advanced_options():
     metrics = res["strategy_result"]["metrics"]
     assert "Final Balance" in metrics
     assert metrics["Final Balance"] > 0
-    # Params recorded accurately
     params = res["strategy_result"]["params"]
     assert "Equity Allocation" in params
     assert params["Equity Allocation"] == "70.0%"
 
 
 def test_buying_dips_advanced_options():
+    """Tests Buying Dips strategy parameter handling."""
     engine = BacktestEngine()
     res = engine.run_backtest(
         ticker="SPY",
@@ -76,6 +77,7 @@ def test_buying_dips_advanced_options():
 
 
 def test_sip_advanced_options():
+    """Tests SIP strategy execution and metrics."""
     engine = BacktestEngine()
     res = engine.run_backtest(
         ticker="SPY",
@@ -97,6 +99,7 @@ def test_sip_advanced_options():
 
 
 def test_target_stop_loss_trailing():
+    """Tests Target Gain & Stop Loss strategy with trailing stop enabled."""
     engine = BacktestEngine()
     res = engine.run_backtest(
         ticker="SPY",
@@ -121,6 +124,7 @@ def test_target_stop_loss_trailing():
 
 
 def test_moving_average_ema_and_trend_filter():
+    """Tests Moving Average Crossover using EMA and 100-day SMA trend filter."""
     engine = BacktestEngine()
     res = engine.run_backtest(
         ticker="SPY",
@@ -145,6 +149,7 @@ def test_moving_average_ema_and_trend_filter():
 
 
 def test_indian_ticker():
+    """Tests running a backtest on an Indian NSE ticker (RELIANCE.NS)."""
     engine = BacktestEngine()
     res = engine.run_backtest(
         ticker="RELIANCE.NS",
