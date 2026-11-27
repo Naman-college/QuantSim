@@ -11,6 +11,8 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+!Shourya/dist/
+!Shourya/dist/**
 downloads/
 eggs/
 .eggs/

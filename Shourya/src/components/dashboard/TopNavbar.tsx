@@ -2,7 +2,7 @@
 // Member: Shourya (UI).
 
 import React from "react";
-import { Activity, Moon, Play, Search, Sun, Loader2 } from "lucide-react";
+import { Activity, Moon, PanelLeft, Play, Search, Sun, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -18,6 +18,8 @@ interface TopNavbarProps {
   selectedSymbol: string; // Currently active stock ticker
   isDark: boolean; // Dark vs Light theme state
   isRunning: boolean; // Loading spinner state
+  sidebarOpen: boolean; // Whether sidebar panel is visible
+  onToggleSidebar: () => void; // Toggle sidebar open/collapsed
   onToggleTheme: () => void; // Theme toggle handler
   onOpenSearch: () => void; // Opens Ctrl+K Command Palette
   onQuickSelect: (symbol: string, name: string) => void; // 1-click quick asset switch
@@ -28,19 +30,30 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
   selectedSymbol,
   isDark,
   isRunning,
+  sidebarOpen,
+  onToggleSidebar,
   onToggleTheme,
   onOpenSearch,
   onQuickSelect,
   onRunBacktest,
 }) => {
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-border bg-card/85 px-4 backdrop-blur-md">
-      {/* Left: Brand Identity */}
-      <div className="flex items-center gap-2.5 shrink-0">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm">
-          <Activity className="h-4 w-4" />
+    <header className="shrink-0 z-30 flex h-12 items-center justify-between gap-2 border-b border-border bg-card/85 px-3 backdrop-blur-md">
+      {/* Left: Sidebar Toggle + Brand Identity */}
+      <div className="flex items-center gap-2 shrink-0">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onToggleSidebar}
+          title={sidebarOpen ? "Collapse Sidebar" : "Open Sidebar"}
+          className="h-8 w-8"
+        >
+          <PanelLeft className="h-4 w-4" />
+        </Button>
+        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-white shadow-sm">
+          <Activity className="h-3.5 w-3.5" />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <span className="text-sm font-bold tracking-tight text-foreground">QuantSim</span>
           <Badge variant="indigo" className="hidden sm:inline-flex font-mono text-[10px]">
             v2.0

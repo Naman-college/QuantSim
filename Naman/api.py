@@ -14,7 +14,7 @@ from fastapi.responses import FileResponse  # Serves index.html for root route
 from pydantic import BaseModel, Field  # Request payload validation models
 
 from Naman.engine import BacktestEngine  # Core backtest coordinator (Naman)
-from Prakshat.stock_search import search_stocks  # Hybrid local + Yahoo Finance search (Prakshat)
+from Prakshat.stock_search import search_stocks, CURATED_WATCHLIST  # Hybrid search & 100+ offline watchlist (Prakshat)
 from Prakshat.presets import PRESET_MARKETS  # Curated market watchlists (Prakshat)
 from Prakshat.chart_serializer import serialize_single_backtest, serialize_comparison_result  # Chart JSON serializers (Prakshat)
 from Rounak import AVAILABLE_STRATEGIES  # Registered 5 trading strategies (Rounak)
@@ -66,6 +66,12 @@ def list_strategies():
 def list_presets():
     """Returns Prakshat's curated US & Indian market presets."""
     return {"presets": PRESET_MARKETS}
+
+
+@app.get("/api/watchlist")
+def list_watchlist():
+    """Returns Prakshat's full 100+ curated watchlist for 0ms instant client-side filtering."""
+    return {"results": CURATED_WATCHLIST}
 
 
 @app.get("/api/search")

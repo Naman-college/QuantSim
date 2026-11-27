@@ -238,7 +238,7 @@ export const ComparisonChart: React.FC<ComparisonChartProps> = ({ data, isDark, 
       </div>
 
       {/* Multi-line Canvas + Floating ShadCN Glass Legend */}
-      <div className="relative flex-1 min-h-[340px] w-full">
+      <div className="relative flex-1 min-h-0 w-full">
         <div className="pointer-events-none absolute top-3 left-3 z-10 flex flex-col gap-1.5 rounded-lg border border-border/70 bg-card/85 px-3 py-2.5 backdrop-blur-md shadow-sm">
           <span className="text-[11px] font-semibold text-muted-foreground font-mono">{legendDate}</span>
           <div className="flex flex-col gap-1">

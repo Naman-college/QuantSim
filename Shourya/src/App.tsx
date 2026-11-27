@@ -100,6 +100,7 @@ function buildStrategyParamsMap(cfg: StrategyConfigState): Record<string, Record
 export default function App() {
   const [isDark, setIsDark] = useState(true);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<"single" | "compare">("single");
 
   const [selectedSymbol, setSelectedSymbol] = useState("SPY");
@@ -232,7 +233,7 @@ export default function App() {
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="min-h-screen flex flex-col bg-background text-foreground">
+      <div className="h-screen w-screen overflow-hidden flex flex-col bg-background text-foreground">
         <Toaster theme={isDark ? "dark" : "light"} richColors position="bottom-right" />
 
         <StockCommandPalette
@@ -245,35 +246,48 @@ export default function App() {
           selectedSymbol={selectedSymbol}
           isDark={isDark}
           isRunning={isRunningSingle || isRunningCompare}
+          sidebarOpen={sidebarOpen}
+          onToggleSidebar={() => setSidebarOpen((o) => !o)}
           onToggleTheme={() => setIsDark((d) => !d)}
           onOpenSearch={() => setSearchOpen(true)}
           onQuickSelect={handleQuickSelect}
           onRunBacktest={() => (activeTab === "compare" ? runComparison() : runSingleBacktest())}
         />
 
-        <div className="flex flex-1 flex-col lg:flex-row min-h-0">
-          <SidebarPanel
-            selectedSymbol={selectedSymbol}
-            selectedName={selectedName}
-            currency={currency}
-            strategyName={strategyName}
-            capital={capital}
-            startDate={startDate}
-            config={config}
-            isRunning={isRunningSingle || isRunningCompare}
-            onOpenSearch={() => setSearchOpen(true)}
-            onStrategyChange={setStrategyName}
-            onCapitalChange={setCapital}
-            onStartDateChange={setStartDate}
-            onConfigChange={(patch) => setConfig((prev) => ({ ...prev, ...patch }))}
-            onRunBacktest={() => runSingleBacktest()}
-            onCompareAll={() => runComparison()}
-          />
+        <div className="relative flex flex-1 min-h-0 overflow-hidden">
+          {sidebarOpen && (
+            <>
+              {/* Backdrop on narrow viewports (< md) so sidebar overlays cleanly without pushing charts off-frame */}
+              <div
+                onClick={() => setSidebarOpen(false)}
+                className="fixed inset-0 top-12 z-20 bg-black/50 backdrop-blur-[1px] md:hidden"
+              />
+              <div className="fixed inset-y-0 left-0 top-12 z-30 md:static md:z-auto h-[calc(100vh-3rem)] md:h-full">
+                <SidebarPanel
+                  selectedSymbol={selectedSymbol}
+                  selectedName={selectedName}
+                  currency={currency}
+                  strategyName={strategyName}
+                  capital={capital}
+                  startDate={startDate}
+                  config={config}
+                  isRunning={isRunningSingle || isRunningCompare}
+                  onOpenSearch={() => setSearchOpen(true)}
+                  onStrategyChange={setStrategyName}
+                  onCapitalChange={setCapital}
+                  onStartDateChange={setStartDate}
+                  onConfigChange={(patch) => setConfig((prev) => ({ ...prev, ...patch }))}
+                  onRunBacktest={() => runSingleBacktest()}
+                  onCompareAll={() => runComparison()}
+                />
+              </div>
+            </>
+          )}
 
-          {/* Main Analytical Workspace */}
-          <main className="flex-1 p-4 flex flex-col min-w-0">
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col flex-1">
-              <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Main Analytical Workspace (100% locked inside remaining viewport height/width) */}
+          <main className="flex-1 min-w-0 min-h-0 p-3 flex flex-col overflow-hidden">
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="flex flex-col flex-1 min-h-0 overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-2 shrink-0">
                 <TabsList>
                   <TabsTrigger value="single">
                     <BarChart3 className="h-3.5 w-3.5 text-indigo-400" />
@@ -294,7 +308,10 @@ export default function App() {
                 )}
               </div>
 
-              <TabsContent value="single" className="flex-1 flex flex-col gap-4">
+              <TabsContent
+                value="single"
+                className="flex-1 min-h-0 flex flex-col gap-2.5 mt-2.5 overflow-hidden data-[state=inactive]:hidden"
+              >
                 <KpiGrid
                   metrics={singleResult?.metrics ?? null}
                   benchMetrics={singleResult?.benchmark_metrics ?? null}
@@ -303,15 +320,15 @@ export default function App() {
                   isLoading={isRunningSingle}
                 />
 
-                <div className="grid grid-cols-1 xl:grid-cols-12 gap-4 flex-1 min-h-[440px]">
-                  <div className="xl:col-span-8 min-h-[400px]">
+                <div className="grid grid-cols-1 lg:grid-cols-12 grid-rows-[1fr_minmax(130px,36%)] lg:grid-rows-1 gap-2.5 flex-1 min-h-0 overflow-hidden">
+                  <div className="lg:col-span-8 h-full min-h-0 overflow-hidden">
                     <SingleStrategyChart
                       data={singleResult}
                       isDark={isDark}
                       isLoading={isRunningSingle}
                     />
                   </div>
-                  <div className="xl:col-span-4 min-h-[400px]">
+                  <div className="lg:col-span-4 h-full min-h-0 overflow-hidden">
                     <TradeLogPanel
                       events={singleResult?.trade_events ?? []}
                       currency={singleResult?.currency ?? currency}
@@ -320,7 +337,10 @@ export default function App() {
                 </div>
               </TabsContent>
 
-              <TabsContent value="compare" className="flex-1">
+              <TabsContent
+                value="compare"
+                className="flex-1 min-h-0 mt-2.5 overflow-hidden data-[state=inactive]:hidden"
+              >
                 <ComparisonDashboard
                   data={compareResult}
                   isDark={isDark}

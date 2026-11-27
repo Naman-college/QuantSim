@@ -38,6 +38,10 @@ def test_search_and_presets():
     assert presets.status_code == 200
     assert "US Equities & ETFs" in presets.json()["presets"]
 
+    watchlist = client.get("/api/watchlist")
+    assert watchlist.status_code == 200
+    assert len(watchlist.json()["results"]) >= 50
+
 
 def test_backtest_endpoint_and_indian_currency():
     """Verifies POST /api/backtest returns chart-ready JSON and '₹' for NSE stocks."""

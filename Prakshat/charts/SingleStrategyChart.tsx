@@ -430,7 +430,7 @@ export const SingleStrategyChart: React.FC<SingleStrategyChartProps> = ({ data, 
       </div>
 
       {/* Chart Canvas Area + Floating HUD + Loading Blur */}
-      <div className="relative flex-1 min-h-[340px] w-full">
+      <div className="relative flex-1 min-h-0 w-full">
         {/* Floating Glassmorphic Crosshair HUD */}
         <div className="pointer-events-none absolute top-3 left-3 z-10 flex flex-col gap-0.5 rounded-lg border border-border/70 bg-card/85 px-3 py-2 backdrop-blur-md shadow-sm">
           <span className="text-[11px] font-medium text-muted-foreground font-mono">{hud.date}</span>

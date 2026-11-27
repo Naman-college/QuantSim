@@ -13,7 +13,6 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 
 export interface StrategyConfigState {
   // Strategy 1: Lump Sum
@@ -97,9 +96,9 @@ export const SidebarPanel: React.FC<SidebarPanelProps> = ({
   const isIndia = currency === "₹";
 
   return (
-    <aside className="w-full lg:w-[320px] xl:w-[340px] shrink-0 border-r border-border bg-card/50 flex flex-col">
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-4">
+    <aside className="w-[280px] lg:w-[290px] xl:w-[320px] h-full min-h-0 shrink-0 border-r border-border bg-card flex flex-col overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="p-3.5 space-y-3.5">
           {/* 1. Active Asset Card */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -529,10 +528,10 @@ export const SidebarPanel: React.FC<SidebarPanelProps> = ({
             </div>
           </div>
         </div>
-      </ScrollArea>
+      </div>
 
       {/* Bottom Sticky Action Footer */}
-      <div className="p-4 border-t border-border bg-card/90 space-y-2">
+      <div className="p-3 border-t border-border bg-card shrink-0 space-y-1.5">
         <Button className="w-full font-semibold" onClick={onRunBacktest} disabled={isRunning}>
           <Play className="h-3.5 w-3.5 fill-current" />
           Run Single Backtest

@@ -69,23 +69,23 @@ export const KpiGrid: React.FC<KpiGridProps> = ({
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 shrink-0">
       {cards.map((c) => {
         const Icon = c.icon;
         return (
           <Card key={c.title} className="relative overflow-hidden transition-colors hover:border-border/90">
-            <CardContent className="p-4">
+            <CardContent className="p-3">
               {isLoading || !metrics ? (
-                <div className="space-y-2">
-                  <Skeleton className="h-3.5 w-24" />
-                  <Skeleton className="h-7 w-32" />
-                  <Skeleton className="h-3 w-40" />
+                <div className="space-y-1.5">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-6 w-28" />
+                  <Skeleton className="h-3 w-32" />
                 </div>
               ) : (
                 <>
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                         {c.title}
                       </span>
                       <Tooltip>
@@ -98,30 +98,30 @@ export const KpiGrid: React.FC<KpiGridProps> = ({
                       </Tooltip>
                     </div>
                     <div
-                      className={`flex h-6 w-6 items-center justify-center rounded-md ${
+                      className={`flex h-5 w-5 items-center justify-center rounded-md ${
                         c.positive ? "bg-emerald-500/10 text-emerald-500" : "bg-rose-500/10 text-rose-500"
                       }`}
                     >
-                      <Icon className="h-3.5 w-3.5" />
+                      <Icon className="h-3 w-3" />
                     </div>
                   </div>
 
-                  <div className="mt-1.5 flex items-baseline gap-1.5">
+                  <div className="mt-1 flex items-baseline gap-1">
                     <span
-                      className={`text-xl font-bold tracking-tight font-mono ${
+                      className={`text-base sm:text-lg xl:text-xl font-bold tracking-tight font-mono truncate ${
                         c.positive ? "text-emerald-500" : "text-rose-500"
                       }`}
                     >
                       {c.value}
                     </span>
                     {c.positive ? (
-                      <ArrowUpRight className="h-4 w-4 text-emerald-500 shrink-0" />
+                      <ArrowUpRight className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                     ) : (
-                      <ArrowDownRight className="h-4 w-4 text-rose-500 shrink-0" />
+                      <ArrowDownRight className="h-3.5 w-3.5 text-rose-500 shrink-0" />
                     )}
                   </div>
 
-                  <p className="mt-1 truncate text-[11px] text-muted-foreground font-mono">{c.sub}</p>
+                  <p className="mt-0.5 truncate text-[10px] text-muted-foreground font-mono">{c.sub}</p>
                 </>
               )}
             </CardContent>
